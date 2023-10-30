@@ -7,8 +7,12 @@ import scipy.linalg as la
 import numpy as np
 import numpy.typing as npt
 from typing import Any
+import time
 
-def compute_weights(X: npt.ArrayLike, k: int, phi: float, gamma: float) -> (npt.ArrayLike, csr_array, csr_array):
+def compute_weights(X: npt.ArrayLike, k: int, phi: float, gamma: float, verbose = 1) -> (npt.ArrayLike, csr_array, csr_array):
+    if verbose:
+        print("Computing weights...")
+        start_time = time.perf_counter()
     if phi <= 0:
         raise ValueError("phi must be positive")
     if gamma <= 0:
@@ -39,4 +43,7 @@ def compute_weights(X: npt.ArrayLike, k: int, phi: float, gamma: float) -> (npt.
     Wbar = Wbar.tocsr()
     weight_vec = val.T
     node_arc_matrix = W-Wbar
-    return weight_vec, node_arc_matrix, weight_matrix
+    if verbose:
+        end_time = time.perf_counter()
+        print("Weights computed in {} seconds.".format(end_time - start_time))
+    return weight_vec, node_arc_matrix, weight_matrix, end_time - start_time

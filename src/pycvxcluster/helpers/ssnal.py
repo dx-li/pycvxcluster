@@ -7,6 +7,7 @@ from scipy.sparse import issparse
 import numpy as np
 from dataclasses import dataclass
 import math
+import time
 
 EPS = np.finfo(np.float64).eps
 
@@ -79,13 +80,19 @@ def ssnal(
     scale=0,
     use_kkt=1,
     admm_iter=0,
+    ncgtolconst = 0.5,
     verbose=1,
-    **kwargs,
 ):
+
+    if verbose>0:
+        print("Starting SSNAL...")
+        start_time = time.perf_counter()
 
     xi = data
     z = csr_array((dim.d, dim.E))
     y = Ainput.Amap(xi)
+
+
 
     if admm_iter > 0:
         pass
@@ -105,8 +112,7 @@ def ssnal(
     primobj = get_primobj(data, weight_vec, xi, Axi)
     dualobj = get_dualobj(data, Atz)
     relgap = get_relgap(primobj, dualobj)
-    if verbose:
-        pass
+
 
     if maxfeas < max(1e-6, stoptol):
         if use_kkt:
@@ -124,7 +130,6 @@ def ssnal(
         pass
 
     ncgsigma = sigma
-    ncgtolconst = 0.5
     ncgdim = dim
 
     maxitersub = 10
@@ -222,7 +227,11 @@ def ssnal(
             etaorg = eta
             eta = relgap
 
-    return primobj, dualobj, y, xi, z, eta, msg
+    if verbose>0:
+        end_time = time.perf_counter()
+        print("SSNAL terminated in {} seconds.".format(end_time - start_time))
+        print(f"Status: {msg}, Iterations: {iter+1}")
+    return primobj, dualobj, y, xi, z, eta, msg, iter+1, breakyes, end_time - start_time
 
 
 def sigma_update(iter):
