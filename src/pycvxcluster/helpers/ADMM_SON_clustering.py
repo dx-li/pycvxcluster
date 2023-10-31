@@ -6,22 +6,12 @@ import sys
 from pycompss.api.task import task
 from pycompss.api.api import compss_wait_on
 from pycompss.api.parameter import *
-from sklearn.metrics import silhouette_score
-import pandas as pd
-import matplotlib.pyplot as plt
 import operator
-from sklearn.manifold import TSNE
-from sklearn.cluster import KMeans
-from sklearn.model_selection import cross_val_score
-from sklearn.model_selection import ShuffleSplit
-from sklearn.metrics import pairwise_distances
-import validclust
-from sklearn.metrics import davies_bouldin_score
+
 
 
 def admm_son(
-    filename,
-    folder,
+    A,
     workers=5,
     num_iter=100,
     lmbd=1,
@@ -36,13 +26,14 @@ def admm_son(
     of Multipliers (ADMM) as the solver. ADMM is renowned for being well suited to the distributed
     settings, for its guaranteed convergence and general robustness with respect to the parameters.
 
+    :param A: The data matrix
     :param workers: The number of agents used to solve the problem
     :param num_iter: The maximum number of iterations before the algorithm stops automatically
     :param lmbd: The regularization parameter
     :param rho: The penalty parameter for constraint violation in ADMM
     """
 
-    A = load_data(folder + "/" + filename)
+    #A = load_data(folder + "/" + filename)
 
     N = A.shape[0]
     d = A.shape[1]

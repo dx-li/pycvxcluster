@@ -96,6 +96,7 @@ def ssnal(
         pass
 
     breakyes = 0
+    msg = "error"
     normy = fnorm(y)
     Axi = Ainput.Amap(xi)
     Atz = Ainput.ATMap(z)
@@ -146,7 +147,7 @@ def ssnal(
             maxitersub = max(maxitersub, 30)
         elif primfeas < 1e-1:
             maxitersub = max(maxitersub, 20)
-        y, Axi, xi, par_rr, breakyes = ssncg(
+        y, Axi, xi, par_rr, breakyesncg = ssncg(
             data,
             Ainput,
             z,
@@ -162,7 +163,7 @@ def ssnal(
             bscale,
             cscale,
         )
-        if breakyes < 0:
+        if breakyesncg < 0:
             ncgtolconst = max(ncgtolconst / 1.06, 1e-3)
 
         Rp = Axi - y
@@ -251,6 +252,8 @@ def sigma_update(iter):
         sigma_update_iter = 3
     elif iter < 500:
         sigma_update_iter = 10
+    else:
+        sigma_update_iter = 10
     return sigma_update_iter
 
 
@@ -325,11 +328,11 @@ def ssncg(
         Ly_hist[itersub] = Ly
 
         if np.nanmax(normGradLxi) < np.nanmax(tolsub) and itersub > 1:
-            breakyes -= 1
+            breakyes = -1
             break
         elif max(priminf_sub, dualinf_sub) < 0.5 * tol:
             msg = f"max(priminf_sub, dualinf_sub) < {0.5 * tol:.3f}"
-            breakyes -= 1
+            breakyes = -1
             break
 
         epsilon = min(1e-3, 0.1 * normGradLxi)
