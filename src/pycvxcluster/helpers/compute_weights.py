@@ -9,7 +9,10 @@ import numpy.typing as npt
 from typing import Any
 import time
 
-def compute_weights(X: npt.ArrayLike, k: int, phi: float, gamma: float, verbose = 1) -> (npt.ArrayLike, csr_array, csr_array):
+
+def compute_weights(
+    X: npt.ArrayLike, k: int, phi: float, gamma: float, verbose=1
+) -> (npt.ArrayLike, csr_array, csr_array):
     if verbose:
         print("Computing weights...")
         start_time = time.perf_counter()
@@ -20,12 +23,12 @@ def compute_weights(X: npt.ArrayLike, k: int, phi: float, gamma: float, verbose 
     if k <= 0:
         raise ValueError("k must be positive")
     tree = KDTree(X.T)
-    dist, k_nearest = tree.query(X.T, k=k+1, workers=-1)
+    dist, k_nearest = tree.query(X.T, k=k + 1, workers=-1)
     N = X.shape[1]
     weight_matrix = lil_array((N, N))
     for i in range(N):
-        neighbors = k_nearest[i, :k+1]
-        distances = dist[i, :k+1]
+        neighbors = k_nearest[i, : k + 1]
+        distances = dist[i, : k + 1]
         weight_values = np.exp(-phi * distances**2)
         weight_matrix[i, neighbors] = weight_values
         weight_matrix[neighbors, i] = weight_values
@@ -42,7 +45,7 @@ def compute_weights(X: npt.ArrayLike, k: int, phi: float, gamma: float, verbose 
     W = W.tocsr()
     Wbar = Wbar.tocsr()
     weight_vec = val.T
-    node_arc_matrix = W-Wbar
+    node_arc_matrix = W - Wbar
     if verbose:
         end_time = time.perf_counter()
         print("Weights computed in {} seconds.".format(end_time - start_time))

@@ -4,18 +4,22 @@ from pycvxcluster.helpers.find_clusters import find_clusters
 from pycvxcluster.helpers.ssnal import ssnal
 from pycvxcluster.helpers.ssnal import AInput
 from pycvxcluster.helpers.ssnal import Dim
+
+
 class SSNAL(BaseEstimator, ClusterMixin):
-    def __init__(self,
-                 k,
-                 phi=.5,
-                 gamma=1,
-                 clustertol=1e-5,
-                 sigma=1,
-                 maxiter=1000,
-                 stoptol=1e-6,
-                 ncgtolconst=0.5,
-                 verbose = 1,
-                 **kwargs) -> None:
+    def __init__(
+        self,
+        k,
+        phi=0.5,
+        gamma=1,
+        clustertol=1e-5,
+        sigma=1,
+        maxiter=1000,
+        stoptol=1e-6,
+        ncgtolconst=0.5,
+        verbose=1,
+        **kwargs,
+    ) -> None:
         """
         Parameters
         ----------
@@ -63,17 +67,43 @@ class SSNAL(BaseEstimator, ClusterMixin):
         -------
         self
         """
-        self.X_ = X.T
-        self.weight_vec_, self.node_arc_matrix_, self.weight_matrix_, t1 = compute_weights(self.X_, self.k, self.phi, self.gamma, self.verbose)
+        (
+            self.weight_vec_,
+            self.node_arc_matrix_,
+            self.weight_matrix_,
+            t1,
+        ) = compute_weights(X.T, self.k, self.phi, self.gamma, self.verbose)
         AI = AInput(self.node_arc_matrix_)
-        dim = Dim(self.X_, self.weight_vec_)
-        self.primobj_, self.dualobj_, _, xi, _, self.eta_, _, self.iter_, self.termination_, t2 = ssnal(AI, self.X_, dim, self.weight_vec_, self.sigma, self.maxiter, self.stoptol, self.ncgtolconst, self.verbose, **self.kwargs)
-        self.cluster_id_, self.num_cluster_ = find_clusters(xi, self.clustertol)
+        dim = Dim(X.T, self.weight_vec_)
+        (
+            self.primobj_,
+            self.dualobj_,
+            _,
+            xi,
+            _,
+            self.eta_,
+            _,
+            self.iter_,
+            self.termination_,
+            t2,
+        ) = ssnal(
+            AI,
+            X.T,
+            dim,
+            self.weight_vec_,
+            self.sigma,
+            self.maxiter,
+            self.stoptol,
+            self.ncgtolconst,
+            self.verbose,
+            **self.kwargs,
+        )
+        self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
         self.tot_time_ = t1 + t2
         if self.verbose > 0:
             print(f"Clustering completed in {self.tot_time_} seconds.")
         return self
-    
+
     def fit_predict(self, X, y=None):
         """
         Parameters
@@ -87,5 +117,4 @@ class SSNAL(BaseEstimator, ClusterMixin):
         labels : ndarray of shape (n_samples,)
             Cluster labels.
         """
-        self.fit(X)
-        return self.cluster_id_
+        return super().fit_predict(X, y)

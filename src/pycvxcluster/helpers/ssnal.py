@@ -80,19 +80,17 @@ def ssnal(
     scale=0,
     use_kkt=1,
     admm_iter=0,
-    ncgtolconst = 0.5,
+    ncgtolconst=0.5,
     verbose=1,
 ):
 
-    if verbose>0:
+    if verbose > 0:
         print("Starting SSNAL...")
         start_time = time.perf_counter()
 
     xi = data
     z = csr_array((dim.d, dim.E))
     y = Ainput.Amap(xi)
-
-
 
     if admm_iter > 0:
         pass
@@ -112,7 +110,6 @@ def ssnal(
     primobj = get_primobj(data, weight_vec, xi, Axi)
     dualobj = get_dualobj(data, Atz)
     relgap = get_relgap(primobj, dualobj)
-
 
     if maxfeas < max(1e-6, stoptol):
         if use_kkt:
@@ -227,11 +224,22 @@ def ssnal(
             etaorg = eta
             eta = relgap
 
-    if verbose>0:
+    if verbose > 0:
         end_time = time.perf_counter()
         print("SSNAL terminated in {} seconds.".format(end_time - start_time))
         print(f"Status: {msg}, Iterations: {iter+1}")
-    return primobj, dualobj, y, xi, z, eta, msg, iter+1, breakyes, end_time - start_time
+    return (
+        primobj,
+        dualobj,
+        y,
+        xi,
+        z,
+        eta,
+        msg,
+        iter + 1,
+        breakyes,
+        end_time - start_time,
+    )
 
 
 def sigma_update(iter):
