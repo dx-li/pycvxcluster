@@ -55,7 +55,7 @@ class SSNAL(BaseEstimator, ClusterMixin):
         self.verbose = verbose
         self.kwargs = kwargs
 
-    def fit(self, X, y=None):
+    def fit(self, X, y=None, return_centers=False):
         """
         Parameters
         ----------
@@ -98,6 +98,8 @@ class SSNAL(BaseEstimator, ClusterMixin):
             self.verbose,
             **self.kwargs,
         )
+        if return_centers:
+            self.centers_ = xi
         self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
         self.tot_time_ = t1 + t2
         if self.verbose > 0:
