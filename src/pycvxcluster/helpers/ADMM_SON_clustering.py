@@ -9,7 +9,6 @@ from pycompss.api.parameter import *
 import operator
 
 
-
 def admm_son(
     A,
     workers=5,
@@ -20,7 +19,6 @@ def admm_son(
     abstol=1e-4,
     reltol=1e-2,
 ):
-
     """ADMM-based convex clustering represents an adapted kmeans implementation, based on the idea of SON (sum of norms) clustering,
     but solving the problem in a distributed manner. It relies on the Alternating Direction Method
     of Multipliers (ADMM) as the solver. ADMM is renowned for being well suited to the distributed
@@ -33,7 +31,7 @@ def admm_son(
     :param rho: The penalty parameter for constraint violation in ADMM
     """
 
-    #A = load_data(folder + "/" + filename)
+    # A = load_data(folder + "/" + filename)
 
     N = A.shape[0]
     d = A.shape[1]

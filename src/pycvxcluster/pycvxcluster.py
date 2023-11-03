@@ -106,7 +106,7 @@ class SSNAL(BaseEstimator, ClusterMixin):
             print(f"Clustering completed in {self.tot_time_} seconds.")
         return self
 
-    def fit_predict(self, X, y=None):
+    def fit_predict(self, X, y=None, **kwargs):
         """
         Parameters
         ----------
@@ -119,4 +119,5 @@ class SSNAL(BaseEstimator, ClusterMixin):
         labels : ndarray of shape (n_samples,)
             Cluster labels.
         """
-        return super().fit_predict(X, y)
+        self.fit(X, y, **kwargs)
+        return self.labels_

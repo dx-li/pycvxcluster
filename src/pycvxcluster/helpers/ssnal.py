@@ -83,7 +83,6 @@ def ssnal(
     ncgtolconst=0.5,
     verbose=1,
 ):
-
     if verbose > 0:
         print("Starting SSNAL...")
         start_time = time.perf_counter()
@@ -276,7 +275,6 @@ def ssncg(
     verbose=1,
     **kwargs,
 ):
-
     maxitpsqmr = 500
     sig = sigma
     breakyes = 0
