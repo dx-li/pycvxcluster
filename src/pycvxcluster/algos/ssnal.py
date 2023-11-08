@@ -3,19 +3,14 @@ import scipy.sparse.linalg as sla
 from scipy.sparse import csr_array
 from scipy.sparse import lil_array
 from scipy.sparse import find
-from scipy.sparse import issparse
+from pycvxcluster.algos.helpers import fnorm
+from pycvxcluster.algos.helpers import prox_l2
+from pycvxcluster.algos.helpers import proj_l2 as proj_l2
 import numpy as np
-from dataclasses import dataclass
 import math
 import time
 
 EPS = np.finfo(np.float64).eps
-
-
-def fnorm(X):
-    if issparse(X):
-        return sla.norm(X, "fro")
-    return la.norm(X, "fro")
 
 
 class AInput:
@@ -27,7 +22,7 @@ class AInput:
     def Amap(self, x):
         return x @ self.A0
 
-    def ATMap(self, x):
+    def ATmap(self, x):
         return x @ self.A0.T
 
     def ATAmap(self, x):
@@ -39,34 +34,6 @@ class Dim:
         self.n = X.shape[1]
         self.d = X.shape[0]
         self.E = len(weight_vec)
-
-
-def proj_l2(input, weight_vec):
-    d, n = input.shape
-    if n != len(weight_vec):
-        raise ValueError("x and weight_vec must have the same length")
-    output = lil_array(input.copy())
-    norm_input = np.sqrt(np.sum(input * input, axis=0))
-    idx = norm_input > weight_vec
-    if idx.any():
-        output[:, idx] = output[:, idx] * weight_vec[idx] / norm_input[idx]
-    output = output.tocsr()
-    return output
-
-
-def prox_l2(y, weight_vec):
-    d, n = y.shape
-    if n != len(weight_vec):
-        raise ValueError("y and weight_vec must have the same length")
-    norm_y_col = np.sqrt(np.sum(y * y, axis=0))
-    alpha_vec = weight_vec / (norm_y_col + 1e-15)
-    idx = alpha_vec < 1
-    # idx = find(rr)
-    x = lil_array((d, n))
-    if idx.any():
-        x[:, idx] = y[:, idx] * (1 - alpha_vec[idx])
-    x = x.tocsr()
-    return x, idx, norm_y_col
 
 
 def ssnal(
@@ -85,8 +52,7 @@ def ssnal(
 ):
     if verbose > 0:
         print("Starting SSNAL...")
-        start_time = time.perf_counter()
-
+    start_time = time.perf_counter()
     xi = data
     z = csr_array((dim.d, dim.E))
     y = Ainput.Amap(xi)
@@ -98,7 +64,7 @@ def ssnal(
     msg = "error"
     normy = fnorm(y)
     Axi = Ainput.Amap(xi)
-    Atz = Ainput.ATMap(z)
+    Atz = Ainput.ATmap(z)
     Rp = Axi - y
     proj_z = proj_l2(z, weight_vec)
     Rd = z - proj_z
@@ -167,7 +133,7 @@ def ssnal(
 
         Rp = Axi - y
         z = zold + sigma * Rp
-        Atz = Ainput.ATMap(z)
+        Atz = Ainput.ATmap(z)
         normRp = fnorm(Rp)
         normy = fnorm(y)
         primfeasorg = primfeas
@@ -223,9 +189,8 @@ def ssnal(
         else:
             etaorg = eta
             eta = relgap
-
+    end_time = time.perf_counter()
     if verbose > 0:
-        end_time = time.perf_counter()
         print("SSNAL terminated in {} seconds.".format(end_time - start_time))
         print(f"Status: {msg}, Iterations: {iter+1}")
     return (
@@ -310,7 +275,7 @@ def ssncg(
     for itersub in range(maxitersub):
         Ly = 0.5 * fnorm(xi - data) ** 2
         Ly = Ly + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
-        GradLxi = data - xi - sig * Ainput.ATMap(ytmp)
+        GradLxi = data - xi - sig * Ainput.ATmap(ytmp)
         normGradLxi = fnorm(GradLxi)
         priminf_sub = normGradLxi
         dualinf_sub = normRd * cscale / (1 + normborg * cscale)
@@ -599,7 +564,7 @@ def Matvec(y, nzidx, alpha, Dsub, sigma, Ainput):
         Aytmp = Ay[:, idx]
         rho = alpha * np.sum(Aytmp * Dsub, axis=0)
         Ay[:, idx] = Aytmp * alpha - Dsub * rho
-    My = y + sigma * Ainput.ATMap(Ay)
+    My = y + sigma * Ainput.ATmap(Ay)
     return My
 
 

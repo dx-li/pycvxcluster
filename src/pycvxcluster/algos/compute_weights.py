@@ -15,7 +15,7 @@ def compute_weights(
 ) -> (npt.ArrayLike, csr_array, csr_array):
     if verbose:
         print("Computing weights...")
-        start_time = time.perf_counter()
+    start_time = time.perf_counter()
     if phi <= 0:
         raise ValueError("phi must be positive")
     if gamma <= 0:
@@ -46,7 +46,7 @@ def compute_weights(
     Wbar = Wbar.tocsr()
     weight_vec = val.T
     node_arc_matrix = W - Wbar
+    end_time = time.perf_counter()
     if verbose:
-        end_time = time.perf_counter()
         print("Weights computed in {} seconds.".format(end_time - start_time))
     return weight_vec, node_arc_matrix, weight_matrix, end_time - start_time
