@@ -14,6 +14,7 @@ class CVXClusterAlg(BaseEstimator, ClusterMixin):
         self.node_arc_matrix_ = None
         self.weight_vec_ = None
         self._weight_matrix_ = None
+
     @property
     def weight_matrix_(self):
         return self._weight_matrix_
@@ -77,7 +78,14 @@ class SSNAL(CVXClusterAlg):
         self.verbose = verbose
         self.kwargs = kwargs
 
-    def fit(self, X, y=None, save_centers=False, weight_matrix=None, recalculate_weights=True):
+    def fit(
+        self,
+        X,
+        y=None,
+        save_centers=False,
+        weight_matrix=None,
+        recalculate_weights=True,
+    ):
         """
         Parameters
         ----------
@@ -98,7 +106,9 @@ class SSNAL(CVXClusterAlg):
                 (
                     self.weight_matrix_,
                     t1,
-                ) = compute_weight_matrix(X.T, self.k, self.phi, self.gamma, self.verbose)
+                ) = compute_weight_matrix(
+                    X.T, self.k, self.phi, self.gamma, self.verbose
+                )
             else:
                 t1s = time.perf_counter()
                 self.weight_matrix_ = weight_matrix
@@ -192,7 +202,14 @@ class ADMM(CVXClusterAlg):
         self.stop_tol = stop_tol
         self.verbose = verbose
 
-    def fit(self, X, y=None, save_centers=False, weight_matrix=None, recalculate_weights=True):
+    def fit(
+        self,
+        X,
+        y=None,
+        save_centers=False,
+        weight_matrix=None,
+        recalculate_weights=True,
+    ):
         """
         Parameters
         ----------
@@ -213,7 +230,9 @@ class ADMM(CVXClusterAlg):
                 (
                     self.weight_matrix_,
                     t1,
-                ) = compute_weight_matrix(X.T, self.k, self.phi, self.gamma, self.verbose)
+                ) = compute_weight_matrix(
+                    X.T, self.k, self.phi, self.gamma, self.verbose
+                )
             else:
                 t1s = time.perf_counter()
                 self.weight_matrix_ = weight_matrix
