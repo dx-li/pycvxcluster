@@ -1,21 +1,31 @@
 from sklearn.base import BaseEstimator, ClusterMixin
 from pycvxcluster.algos.compute_weights import compute_weights
+from pycvxcluster.algos.compute_weights import compute_weight_matrix
+from pycvxcluster.algos.compute_weights import get_nam_wv_from_wm
 from pycvxcluster.algos.find_clusters import find_clusters
-from pycvxcluster.algos.ssnal import ssnal
-from pycvxcluster.algos.ssnal import AInput
-from pycvxcluster.algos.ssnal import Dim
+from pycvxcluster.algos.ssnal import ssnal_wrapper
 from pycvxcluster.algos.admm import admm_l2
+import time
 
+class CVXClusterAlg(BaseEstimator, ClusterMixin):
+    @property
+    def weight_matrix_(self):
+        return self._weight_matrix_
+    @weight_matrix_.setter
+    def weight_matrix_(self, value):
+        self.node_arc_matrix_, self.weight_vec_ = get_nam_wv_from_wm(value)
+        self._weight_matrix_ = value
 
-class SSNAL(BaseEstimator, ClusterMixin):
+class SSNAL(CVXClusterAlg):
     def __init__(
         self,
-        k,
+        k=10,
         phi=0.5,
         gamma=1,
         clustertol=1e-5,
         sigma=1,
         maxiter=1000,
+        admm_iter=1000,
         stoptol=1e-6,
         ncgtolconst=0.5,
         verbose=1,
@@ -51,12 +61,13 @@ class SSNAL(BaseEstimator, ClusterMixin):
         self.clustertol = clustertol
         self.sigma = sigma
         self.maxiter = maxiter
+        self.admm_iter = admm_iter
         self.stoptol = stoptol
         self.ncgtolconst = ncgtolconst
         self.verbose = verbose
         self.kwargs = kwargs
 
-    def fit(self, X, y=None, save_centers=False):
+    def fit(self, X, y=None, save_centers=False, weight_matrix=None):
         """
         Parameters
         ----------
@@ -68,14 +79,15 @@ class SSNAL(BaseEstimator, ClusterMixin):
         -------
         self
         """
-        (
-            self.weight_vec_,
-            self.node_arc_matrix_,
-            self.weight_matrix_,
-            t1,
-        ) = compute_weights(X.T, self.k, self.phi, self.gamma, self.verbose)
-        AI = AInput(self.node_arc_matrix_)
-        dim = Dim(X.T, self.weight_vec_)
+        if weight_matrix is None:
+            (
+                self.weight_matrix_,
+                t1,
+            ) = compute_weight_matrix(X.T, self.k, self.phi, self.gamma, self.verbose)
+        else:
+            t1s = time.perf_counter()
+            self.weight_matrix_ = weight_matrix
+            t1 = time.perf_counter() - t1s
         (
             self.primobj_,
             self.dualobj_,
@@ -87,13 +99,13 @@ class SSNAL(BaseEstimator, ClusterMixin):
             self.iter_,
             self.termination_,
             t2,
-        ) = ssnal(
-            AI,
+        ) = ssnal_wrapper(
             X.T,
-            dim,
             self.weight_vec_,
+            self.node_arc_matrix_,
             sigma=self.sigma,
             maxiter=self.maxiter,
+            admm_iter=self.admm_iter,
             stoptol=self.stoptol,
             ncgtolconst=self.ncgtolconst,
             verbose=self.verbose,
@@ -124,10 +136,10 @@ class SSNAL(BaseEstimator, ClusterMixin):
         return self.labels_
 
 
-class ADMM(BaseEstimator, ClusterMixin):
+class ADMM(CVXClusterAlg):
     def __init__(
         self,
-        k,
+        k=10,
         phi=0.5,
         gamma=1,
         clustertol=1e-5,
@@ -165,7 +177,7 @@ class ADMM(BaseEstimator, ClusterMixin):
         self.stop_tol = stop_tol
         self.verbose = verbose
 
-    def fit(self, X, y=None, save_centers=False):
+    def fit(self, X, y=None, save_centers=False, weight_matrix=None):
         """
         Parameters
         ----------
@@ -177,14 +189,21 @@ class ADMM(BaseEstimator, ClusterMixin):
         -------
         self
         """
-        (
-            self.weight_vec_,
-            self.node_arc_matrix_,
-            self.weight_matrix_,
-            t1,
-        ) = compute_weights(X.T, self.k, self.phi, self.gamma, self.verbose)
+        if weight_matrix is None:
+            (
+                self.weight_vec_,
+                self.node_arc_matrix_,
+                self.weight_matrix_,
+                t1,
+            ) = compute_weights(X.T, self.k, self.phi, self.gamma, self.verbose)
+        else:
+            t1s = time.perf_counter()
+            self.weight_matrix_ = weight_matrix
+            t1 = time.perf_counter() - t1s
         (
             U,
+            _,
+            _,
             self.termination_,
             self.iter_,
             self.eta_,

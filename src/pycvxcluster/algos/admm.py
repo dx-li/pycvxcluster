@@ -10,7 +10,7 @@ import time
 
 
 def admm_l2(
-    X, A, weight_vec, max_iter=20000, sigma=1, rho=1.618, stop_tol=1e-6, verbose=1
+    X, A, weight_vec, max_iter=20000, sigma=1, rho=1.618, stop_tol=1e-6, verbose=1, xi0=None, x0=None, y0=None
 ):
     if verbose > 0:
         print("Starting ADMM...")
@@ -22,10 +22,16 @@ def admm_l2(
     factor = cholesky(eye(n) + sigma * A @ A.T)
 
     msg = ""
-
-    xi = X.copy()
-    y = csr_array((d, E))
-    x = y
+    if xi0 is None:
+        xi = X.copy()
+    else:
+        xi = xi0
+    if y0 is None or x0 is None:
+        y = csr_array((d, E))
+        x = y
+    else:
+        y = y0
+        x = x0
     Axi = xi @ A
     AtAxi = Axi @ A.T
     Atx = x @ A.T
@@ -86,6 +92,8 @@ def admm_l2(
         print(f"Termination status: {msg}")
     return (
         xi,
+        y,
+        x,
         msg,
         iter,
         eta,

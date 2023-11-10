@@ -6,6 +6,7 @@ from scipy.sparse import find
 from pycvxcluster.algos.helpers import fnorm
 from pycvxcluster.algos.helpers import prox_l2
 from pycvxcluster.algos.helpers import proj_l2 as proj_l2
+from pycvxcluster.algos.admm import admm_l2
 import numpy as np
 import math
 import time
@@ -35,6 +36,10 @@ class Dim:
         self.d = X.shape[0]
         self.E = len(weight_vec)
 
+def ssnal_wrapper(X, weight_vec, node_arc_matrix, sigma=1, maxiter=100, admm_iter=1000, stoptol=1e-6, ncgtolconst=0.5, verbose=1):
+    Ain = AInput(node_arc_matrix)
+    dim = Dim(X, weight_vec)
+    return ssnal(Ain, X, dim, weight_vec, sigma=sigma, maxiter=maxiter, admm_iter=admm_iter, stoptol=stoptol, ncgtolconst=ncgtolconst, verbose=verbose)
 
 def ssnal(
     Ainput,
@@ -49,16 +54,31 @@ def ssnal(
     admm_iter=0,
     ncgtolconst=0.5,
     verbose=1,
+    x0=None,
+    z0=None,
+    y0=None
 ):
     if verbose > 0:
         print("Starting SSNAL...")
     start_time = time.perf_counter()
-    xi = data
-    z = csr_array((dim.d, dim.E))
-    y = Ainput.Amap(xi)
+    if x0 is None:
+        xi = data
+    else:
+        xi = x0
+    if z0 is None:
+        z = csr_array((dim.d, dim.E))
+    else:
+        z = z0
+    if y0 is None:
+        y = Ainput.Amap(xi)
+    else:
+        y = y0
+    
 
     if admm_iter > 0:
-        pass
+        xi, y, z , admm_status, admm_eta, *_ = admm_l2(data, Ainput.A0, weight_vec, max_iter=admm_iter, sigma=sigma, rho=1.618, stop_tol=stoptol, verbose=verbose)
+        if admm_eta < stoptol:
+            print("ADMM converged in {} iterations.".format(admm_status))
 
     breakyes = 0
     msg = "error"
