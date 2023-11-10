@@ -34,6 +34,7 @@ def compute_weights(
         print("Weights computed in {} seconds.".format(end_time - start_time))
     return weight_vec, node_arc_matrix, weight_matrix, end_time - start_time
 
+
 def compute_weight_matrix(X, k, phi, gamma, verbose=1):
     N = X.shape[1]
     print(N)
@@ -63,6 +64,7 @@ def compute_weight_matrix(X, k, phi, gamma, verbose=1):
         print("Weight matrix computed in {} seconds.".format(end_time - start_time))
     return weight_matrix, end_time - start_time
 
+
 def get_nam_wv_from_wm(weight_matrix: npt.ArrayLike) -> (csr_array, npt.ArrayLike):
     N = weight_matrix.shape[0]
     idx_r, idx_c, val = find(triu(weight_matrix))
@@ -74,4 +76,4 @@ def get_nam_wv_from_wm(weight_matrix: npt.ArrayLike) -> (csr_array, npt.ArrayLik
     W = W.tocsr()
     Wbar = Wbar.tocsr()
     weight_vec = val.T
-    return W-Wbar, weight_vec
+    return W - Wbar, weight_vec

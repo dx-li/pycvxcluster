@@ -7,14 +7,22 @@ from pycvxcluster.algos.ssnal import ssnal_wrapper
 from pycvxcluster.algos.admm import admm_l2
 import time
 
+
 class CVXClusterAlg(BaseEstimator, ClusterMixin):
+    def __init__(self) -> None:
+        super().__init__()
+        self.node_arc_matrix_ = None
+        self.weight_vec_ = None
+        self._weight_matrix_ = None
     @property
     def weight_matrix_(self):
         return self._weight_matrix_
+
     @weight_matrix_.setter
     def weight_matrix_(self, value):
         self.node_arc_matrix_, self.weight_vec_ = get_nam_wv_from_wm(value)
         self._weight_matrix_ = value
+
 
 class SSNAL(CVXClusterAlg):
     def __init__(
@@ -25,7 +33,7 @@ class SSNAL(CVXClusterAlg):
         clustertol=1e-5,
         sigma=1,
         maxiter=1000,
-        admm_iter=1000,
+        admm_iter=50,
         stoptol=1e-6,
         ncgtolconst=0.5,
         verbose=1,
@@ -46,6 +54,8 @@ class SSNAL(CVXClusterAlg):
             Parameter for the objective function. The default is 1.
         maxiter : int, optional
             Maximum number of iterations. The default is 1000.
+        admm_iter : int, optional
+            Number of ADMM iterations to warm-start. The default is 50.
         stoptol : float, optional
             Tolerance for the stopping criterion. The default is 1e-6.
         ncgtolconst : float, optional
@@ -67,7 +77,7 @@ class SSNAL(CVXClusterAlg):
         self.verbose = verbose
         self.kwargs = kwargs
 
-    def fit(self, X, y=None, save_centers=False, weight_matrix=None):
+    def fit(self, X, y=None, save_centers=False, weight_matrix=None, recalculate_weights=True):
         """
         Parameters
         ----------
@@ -75,19 +85,24 @@ class SSNAL(CVXClusterAlg):
             Training instances to cluster.
         y : Ignored
             Not used, present here for API consistency by convention.
+        save_centers : bool, optional
+            Whether to save the cluster centers. The default is False.
+        weight_matrix : array-like of shape (n_samples, n_samples), optional
+            Weight matrix to use. The default is None.
         Returns
         -------
         self
         """
-        if weight_matrix is None:
-            (
-                self.weight_matrix_,
-                t1,
-            ) = compute_weight_matrix(X.T, self.k, self.phi, self.gamma, self.verbose)
-        else:
-            t1s = time.perf_counter()
-            self.weight_matrix_ = weight_matrix
-            t1 = time.perf_counter() - t1s
+        if recalculate_weights:
+            if weight_matrix is None:
+                (
+                    self.weight_matrix_,
+                    t1,
+                ) = compute_weight_matrix(X.T, self.k, self.phi, self.gamma, self.verbose)
+            else:
+                t1s = time.perf_counter()
+                self.weight_matrix_ = weight_matrix
+                t1 = time.perf_counter() - t1s
         (
             self.primobj_,
             self.dualobj_,
@@ -177,7 +192,7 @@ class ADMM(CVXClusterAlg):
         self.stop_tol = stop_tol
         self.verbose = verbose
 
-    def fit(self, X, y=None, save_centers=False, weight_matrix=None):
+    def fit(self, X, y=None, save_centers=False, weight_matrix=None, recalculate_weights=True):
         """
         Parameters
         ----------
@@ -185,21 +200,24 @@ class ADMM(CVXClusterAlg):
             Training instances to cluster.
         y : Ignored
             Not used, present here for API consistency by convention.
+        save_centers : bool, optional
+            Whether to save the cluster centers. The default is False.
+        weight_matrix : array-like of shape (n_samples, n_samples), optional
+            Weight matrix to use. The default is None.
         Returns
         -------
         self
         """
-        if weight_matrix is None:
-            (
-                self.weight_vec_,
-                self.node_arc_matrix_,
-                self.weight_matrix_,
-                t1,
-            ) = compute_weights(X.T, self.k, self.phi, self.gamma, self.verbose)
-        else:
-            t1s = time.perf_counter()
-            self.weight_matrix_ = weight_matrix
-            t1 = time.perf_counter() - t1s
+        if recalculate_weights:
+            if weight_matrix is None:
+                (
+                    self.weight_matrix_,
+                    t1,
+                ) = compute_weight_matrix(X.T, self.k, self.phi, self.gamma, self.verbose)
+            else:
+                t1s = time.perf_counter()
+                self.weight_matrix_ = weight_matrix
+                t1 = time.perf_counter() - t1s
         (
             U,
             _,

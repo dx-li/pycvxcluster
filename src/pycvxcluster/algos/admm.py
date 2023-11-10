@@ -10,7 +10,17 @@ import time
 
 
 def admm_l2(
-    X, A, weight_vec, max_iter=20000, sigma=1, rho=1.618, stop_tol=1e-6, verbose=1, xi0=None, x0=None, y0=None
+    X,
+    A,
+    weight_vec,
+    max_iter=20000,
+    sigma=1,
+    rho=1.618,
+    stop_tol=1e-6,
+    verbose=1,
+    xi0=None,
+    x0=None,
+    y0=None,
 ):
     if verbose > 0:
         print("Starting ADMM...")
@@ -89,7 +99,7 @@ def admm_l2(
     end_time = time.perf_counter()
     if verbose > 0:
         print("ADMM finished in {} seconds.".format(end_time - start_time))
-        print(f"Termination status: {msg}")
+        print(f"Termination status: {msg}, iterations: {iter}")
     return (
         xi,
         y,

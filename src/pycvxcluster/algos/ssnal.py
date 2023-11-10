@@ -36,10 +36,12 @@ class Dim:
         self.d = X.shape[0]
         self.E = len(weight_vec)
 
-def ssnal_wrapper(X, weight_vec, node_arc_matrix, sigma=1, maxiter=100, admm_iter=1000, stoptol=1e-6, ncgtolconst=0.5, verbose=1):
+
+def ssnal_wrapper(X, weight_vec, node_arc_matrix, **kwargs):
     Ain = AInput(node_arc_matrix)
     dim = Dim(X, weight_vec)
-    return ssnal(Ain, X, dim, weight_vec, sigma=sigma, maxiter=maxiter, admm_iter=admm_iter, stoptol=stoptol, ncgtolconst=ncgtolconst, verbose=verbose)
+    return ssnal(Ain, X, dim, weight_vec, **kwargs)
+
 
 def ssnal(
     Ainput,
@@ -56,7 +58,7 @@ def ssnal(
     verbose=1,
     x0=None,
     z0=None,
-    y0=None
+    y0=None,
 ):
     if verbose > 0:
         print("Starting SSNAL...")
@@ -73,10 +75,18 @@ def ssnal(
         y = Ainput.Amap(xi)
     else:
         y = y0
-    
 
     if admm_iter > 0:
-        xi, y, z , admm_status, admm_eta, *_ = admm_l2(data, Ainput.A0, weight_vec, max_iter=admm_iter, sigma=sigma, rho=1.618, stop_tol=stoptol, verbose=verbose)
+        xi, y, z, admm_status, admm_eta, *_ = admm_l2(
+            data,
+            Ainput.A0,
+            weight_vec,
+            max_iter=admm_iter,
+            sigma=sigma,
+            rho=1.618,
+            stop_tol=stoptol,
+            verbose=verbose,
+        )
         if admm_eta < stoptol:
             print("ADMM converged in {} iterations.".format(admm_status))
 
@@ -96,6 +106,7 @@ def ssnal(
     primobj = get_primobj(data, weight_vec, xi, Axi)
     dualobj = get_dualobj(data, Atz)
     relgap = get_relgap(primobj, dualobj)
+    eta = None
 
     if maxfeas < max(1e-6, stoptol):
         if use_kkt:
@@ -108,7 +119,7 @@ def ssnal(
         etaorg = eta
         if eta < stoptol:
             breakyes = 1
-            msg = "converged"
+            msg = "Converged in ADMM"
     if breakyes == 1:
         pass
 
