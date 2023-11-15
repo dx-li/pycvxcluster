@@ -17,7 +17,7 @@ def compute_weights(
         print("Computing weights...")
     start_time = time.perf_counter()
     N = X.shape[1]
-    weight_matrix = compute_weight_matrix(X, k, phi, gamma, N)
+    weight_matrix, _ = compute_weight_matrix(X, k, phi, gamma, N)
     idx_r, idx_c, val = find(triu(weight_matrix))
     num_weight = len(val)
     W = lil_array((N, num_weight))
@@ -37,7 +37,6 @@ def compute_weights(
 
 def compute_weight_matrix(X, k, phi, gamma, verbose=1):
     N = X.shape[1]
-    print(N)
     if verbose:
         print("Computing weight matrix...")
     start_time = time.perf_counter()

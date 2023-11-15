@@ -113,6 +113,8 @@ class SSNAL(CVXClusterAlg):
                 t1s = time.perf_counter()
                 self.weight_matrix_ = weight_matrix
                 t1 = time.perf_counter() - t1s
+        else:
+            t1 = 0
         (
             self.primobj_,
             self.dualobj_,
@@ -139,6 +141,7 @@ class SSNAL(CVXClusterAlg):
         if save_centers:
             self.centers_ = xi
         self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
+        self.ssnal_runtime_ = t2
         self.total_time_ = t1 + t2
         if self.verbose > 0:
             print(f"Clustering completed in {self.total_time_} seconds.")
@@ -172,6 +175,7 @@ class ADMM(CVXClusterAlg):
         maxiter=20000,
         stop_tol=1e-6,
         verbose=1,
+        **kwargs
     ):
         """
         Parameters
@@ -201,6 +205,7 @@ class ADMM(CVXClusterAlg):
         self.maxiter = maxiter
         self.stop_tol = stop_tol
         self.verbose = verbose
+        self.kwargs = kwargs
 
     def fit(
         self,
@@ -237,6 +242,8 @@ class ADMM(CVXClusterAlg):
                 t1s = time.perf_counter()
                 self.weight_matrix_ = weight_matrix
                 t1 = time.perf_counter() - t1s
+        else:
+            t1 = 0
         (
             U,
             _,
@@ -257,6 +264,7 @@ class ADMM(CVXClusterAlg):
             sigma=self.sigma,
             stop_tol=self.stop_tol,
             verbose=self.verbose,
+            **self.kwargs
         )
         self.labels_, self.n_clusters_ = find_clusters(U, self.clustertol)
         self.total_time_ = t1 + t2
