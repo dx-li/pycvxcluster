@@ -111,7 +111,7 @@ class SSNAL(CVXClusterAlg):
                 )
             else:
                 t1s = time.perf_counter()
-                self.weight_matrix_ = weight_matrix
+                self.weight_matrix_ = self.gamma * weight_matrix
                 t1 = time.perf_counter() - t1s
         else:
             t1 = 0
@@ -240,7 +240,7 @@ class ADMM(CVXClusterAlg):
                 )
             else:
                 t1s = time.perf_counter()
-                self.weight_matrix_ = weight_matrix
+                self.weight_matrix_ = self.gamma * weight_matrix
                 t1 = time.perf_counter() - t1s
         else:
             t1 = 0
