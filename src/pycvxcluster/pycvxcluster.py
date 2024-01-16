@@ -118,9 +118,9 @@ class SSNAL(CVXClusterAlg):
         (
             self.primobj_,
             self.dualobj_,
-            _,
+            y,
             xi,
-            _,
+            z,
             self.eta_,
             _,
             self.iter_,
@@ -140,6 +140,8 @@ class SSNAL(CVXClusterAlg):
         )
         if save_centers:
             self.centers_ = xi
+            self.y = y
+            self.z = z
         self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
         self.ssnal_runtime_ = t2
         self.total_time_ = t1 + t2
