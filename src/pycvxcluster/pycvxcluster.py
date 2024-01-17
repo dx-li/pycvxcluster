@@ -34,7 +34,7 @@ class SSNAL(CVXClusterAlg):
         clustertol=1e-5,
         sigma=1,
         maxiter=1000,
-        admm_iter=50,
+        admm_iter=100,
         stoptol=1e-6,
         ncgtolconst=0.5,
         verbose=1,
