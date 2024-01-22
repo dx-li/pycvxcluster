@@ -239,15 +239,12 @@ def ssnal(
 
 
 def sigma_update(iter):
-    if iter < 10:
-        sigma_update_iter = 2
-    elif iter < 20:
+    sigma_update_iter = 2
+    if iter < 20:
         sigma_update_iter = 3
     elif iter < 200:
         sigma_update_iter = 3
     elif iter < 500:
-        sigma_update_iter = 10
-    else:
         sigma_update_iter = 10
     return sigma_update_iter
 

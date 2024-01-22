@@ -1,7 +1,7 @@
 # pycvxcluster
 
-Implements convex clustering algorithms with sklearn-like interface. Currently only includes ADMM (Chi, Lange 2015), SSNAL (Sun, Toh, Yuan 2021).
-Dependencies: Numpy, Scipy, sckikit-sparse
+Implements convex clustering algorithms with sklearn-like interface. Will include ADMM (Chi, Lange 2015), SSNAL (Sun, Toh, Yuan 2021).
+Dependencies: Numpy, Scipy, scikit-learn, sckikit-sparse
 
 To do:
 * Custom weights
