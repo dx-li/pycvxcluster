@@ -68,7 +68,7 @@ def ssnal(
     else:
         xi = x0
     if z0 is None:
-        z = csr_array((dim.d, dim.E))
+        z = np.zeros((dim.d, dim.E))
     else:
         z = z0
     if y0 is None:
