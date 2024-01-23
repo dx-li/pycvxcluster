@@ -3,7 +3,7 @@ from pycvxcluster.algos.compute_weights import compute_weights
 from pycvxcluster.algos.compute_weights import compute_weight_matrix
 from pycvxcluster.algos.compute_weights import get_nam_wv_from_wm
 from pycvxcluster.algos.find_clusters import find_clusters
-from pycvxcluster.algos.ssnal import ssnal_wrapper
+from pycvxcluster.algos.ssnal_copy import ssnal_wrapper
 from pycvxcluster.algos.admm import admm_l2
 import time
 
@@ -82,6 +82,7 @@ class SSNAL(CVXClusterAlg):
         self,
         X,
         y=None,
+        save_labels=True,
         save_centers=False,
         weight_matrix=None,
         recalculate_weights=True,
@@ -142,7 +143,8 @@ class SSNAL(CVXClusterAlg):
             self.centers_ = xi
             self.y = y
             self.z = z
-        self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
+        if save_labels:
+            self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
         self.ssnal_runtime_ = t2
         self.total_time_ = t1 + t2
         if self.verbose > 0:
