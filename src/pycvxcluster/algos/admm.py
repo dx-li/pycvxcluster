@@ -37,7 +37,7 @@ def admm_l2(
     else:
         xi = xi0
     if y0 is None or x0 is None:
-        y = csr_array((d, E))
+        y = np.zeros((d, E))
         x = y
     else:
         y = y0

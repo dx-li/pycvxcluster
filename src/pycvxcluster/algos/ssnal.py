@@ -239,12 +239,15 @@ def ssnal(
 
 
 def sigma_update(iter):
-    sigma_update_iter = 2
-    if iter < 20:
+    if iter < 10:
+        sigma_update_iter = 2
+    elif iter < 20:
         sigma_update_iter = 3
     elif iter < 200:
         sigma_update_iter = 3
     elif iter < 500:
+        sigma_update_iter = 10
+    else:
         sigma_update_iter = 10
     return sigma_update_iter
 
@@ -515,7 +518,8 @@ def findstep(
         y, rr, norm_yinput = prox_l2(yinput, (1 / sig) * weight_vec)
         par_rr = rr
         ytmp = yinput - y
-        galp = np.sum(dxi * (data - xi)) - sig * np.sum(Adxi * ytmp)
+        #galp = np.sum(dxi * (data - xi)) - sig * np.sum(Adxi * ytmp)
+        galp = np.einsum("ij,ij->", dxi, data - xi) - sig * np.einsum("ij,ij->", Adxi, ytmp)
 
         if iter == 0:
             gLB = g0
@@ -527,7 +531,8 @@ def findstep(
             Ly = 0.5 * fnorm(xi - data) ** 2
             Ly = (
                 Ly
-                + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
+                #+ np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
+                + np.dot(weight_vec, np.sqrt(np.einsum("ij,ij->j", y, y)))
                 + 0.5 * sig * fnorm(ytmp) ** 2
             )
 
@@ -547,8 +552,8 @@ def findstep(
 
 def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
     d, n = rhs.shape
-    x = csr_array((d, n))
-    r = rhs.copy()
+    x = np.zeros((d, n))
+    r = rhs
     res_temp = fnorm(r)
     resnrm = np.zeros(maxit + 1)
     resnrm[0] = res_temp
@@ -558,6 +563,9 @@ def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
 
     y = -r
     z = Matvec(y, nzidx, alpha, Dsub, sigma, Ainput)
+    #make y, z float64
+    #y = y.astype(np.float64)
+    #z = z.astype(np.float64)
     s = np.sum(y * z)
     t = np.sum(r * y) / s
     x = x + t * y
@@ -570,11 +578,14 @@ def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
         if res_temp < tol:
             break
 
-        B = np.sum(r * z) / s
+        #B = np.sum(r * z) / s
+        B = 1/s * np.einsum("ij,ij->", r, z)
         y = -r + B * y
         z = Matvec(y, nzidx, alpha, Dsub, sigma, Ainput)
-        s = np.sum(y * z)
-        t = np.sum(r * y) / s
+        #s = np.sum(y * z)
+        s = np.einsum("ij,ij->", y, z)
+        #t = np.sum(r * y) / s
+        t = 1/s * np.einsum("ij,ij->", r, y)
         x = x + t * y
 
     if k < maxit:
@@ -590,7 +601,7 @@ def Matvec(y, nzidx, alpha, Dsub, sigma, Ainput):
     Ay = Ainput.Amap(y)
     if lenn > 0:
         Aytmp = Ay[:, idx]
-        rho = alpha * np.sum(Aytmp * Dsub, axis=0)
+        rho = np.einsum("j, ij,ij->j", alpha, Aytmp, Dsub)
         Ay[:, idx] = Aytmp * alpha - Dsub * rho
     My = y + sigma * Ainput.ATmap(Ay)
     return My

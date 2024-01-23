@@ -1,4 +1,3 @@
-import numpy.linalg as la
 import scipy.sparse.linalg as sla
 from scipy.sparse import csr_array
 from scipy.sparse import lil_array
@@ -11,7 +10,7 @@ import numpy as np
 def fnorm(X):
     if issparse(X):
         return sla.norm(X, "fro")
-    return la.norm(X, "fro")
+    return np.linalg.norm(X, "fro")
 
 
 # def proj_l2(U, weights, tau = 1):
@@ -25,7 +24,8 @@ def proj_l2(input, weight_vec):
     if n != len(weight_vec):
         raise ValueError("x and weight_vec must have the same length")
     output = input.copy()
-    norm_input = np.sqrt(np.sum(np.square(output), axis=0))
+    #norm_input = np.sqrt(np.sum(np.square(output), axis=0))
+    norm_input = np.sqrt(np.einsum("ij,ij->j", output, output))
     idx = norm_input > weight_vec
     if idx.any():
         output[:, idx] = output[:, idx] * weight_vec[idx] / norm_input[idx]
@@ -42,7 +42,8 @@ def prox_l2(y, weight_vec):
     d, n = y.shape
     if n != len(weight_vec):
         raise ValueError("y and weight_vec must have the same length")
-    norm_y_col = np.sqrt(np.sum(np.square(y), axis=0))
+    #norm_y_col = np.sqrt(np.sum(np.square(y), axis=0))
+    norm_y_col = np.sqrt(np.einsum("ij,ij->j", y, y))
     alpha_vec = weight_vec / (norm_y_col + 1e-15)
     idx = alpha_vec < 1
     # idx = find(rr)
