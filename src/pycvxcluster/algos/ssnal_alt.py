@@ -5,22 +5,31 @@ import pylops
 import scipy
 import scipy.sparse
 import scipy.sparse.linalg as sla
+
+from numba import jit, njit, prange
+
 #Preliminaries
 
+@jit(nopython=True, parallel=True, fastmath=True)
+def sum_with_numba(X, hat_r, hat_c, D, alpha_less_1):
+    return np.sum((X[:, hat_r] - X[:, hat_c]) * D[:, alpha_less_1], axis=0)
 class B(pylops.LinearOperator):
     r"""
     B operator using node-arc incidence matrices as defined in the paper.
     """
-    def __init__(self, cJ, cJ_bar, dtype=None):
-        self.map = cJ - cJ_bar
-        super().__init__(dtype=np.dtype(dtype), shape=(cJ.shape[0], cJ.shape[1]))
+    def __init__(self, map, dtype=None):
+        self.map = map
+        #self.mapT = self.map.transpose()
+        super().__init__(dtype=np.dtype(dtype), shape=(map.shape[0], map.shape[1]))
 
     def _matmat(self, X):
-        return X @ (self.map)
+        #return right_multiply(X, self.map.data, self.map.indices, self.map.indptr, self.map.shape)
+        return X @ self.map
     
     def _adjoint(self, Z):
-        return Z @ (self.map.T)
-
+        #return right_multiply_transpose(Z, self.map.data, self.map.indices, self.map.indptr, self.map.shape)
+        return Z @ self.map.T
+    
 
 
 def fnorm(X):
@@ -51,11 +60,11 @@ class SSNAL():
         #self.J[self.nz_c, self.nz_r] = 1
         cJ = scipy.sparse.lil_array((self.n, self.E))
         cJ[self.nz_r, np.arange(self.E)] = 1
+        #cJ = cJ.tocsr()
+        #cJ_bar = scipy.sparse.lil_array((self.n, self.E))
+        cJ[self.nz_c, np.arange(self.E)] = -1    
         cJ = cJ.tocsr()
-        cJ_bar = scipy.sparse.lil_array((self.n, self.E))
-        cJ_bar[self.nz_c, np.arange(self.E)] = 1    
-        cJ_bar = cJ_bar.tocsr()
-        self.Bop = B(cJ, cJ_bar)
+        self.Bop = B(cJ)
 
     def pU(self, U):
         return np.dot(self.weights, np.sqrt(np.sum(np.square(U), axis=0)))
@@ -133,7 +142,7 @@ class SSNAL():
         else:
             Ui = U0
         if Z0 is None:
-            Zi = scipy.sparse.csr_array((self.d, self.E))
+            Zi = np.zeros_like(Ui)
         else:
             Zi = Z0
         sigmai = sigma0
@@ -173,6 +182,7 @@ class SSNAL():
             alpha.fill(np.inf)
             alpha[nz_norms_D] = sigmainv * self.weights[nz_norms_D] / norms_D[nz_norms_D]
             alpha_less_1 = (alpha < 1)
+            alpha_less_1_explicit = np.arange(self.E)[alpha_less_1]
             hat_r = self.nz_r[alpha_less_1]
             hat_c = self.nz_c[alpha_less_1]
             hat_alpha = alpha[alpha_less_1]
@@ -181,25 +191,26 @@ class SSNAL():
             #M[hat_r, hat_c] = 1 - hat_alpha
             #M[hat_c, hat_r] = 1 - hat_alpha
 
-            # Mij = np.zeros(self.E)
-            # Mij[alpha_less_1] = 1 - hat_alpha
+            Mij = np.zeros(self.E)
+            Mij[alpha_less_1] = 1 - hat_alpha
 
             indices = np.arange(self.E)[alpha_less_1]
             cM = scipy.sparse.lil_array((self.n, self.E))
             cM[hat_r, indices] = 1 - hat_alpha
+            #cM = cM.tocsr()
+            #cM_bar = scipy.sparse.lil_array((self.n, self.E))
+            cM[hat_c, indices] = -(1 - hat_alpha)
             cM = cM.tocsr()
-            cM_bar = scipy.sparse.lil_array((self.n, self.E))
-            cM_bar[hat_c, indices] = 1 - hat_alpha
-            cM_bar = cM_bar.tocsr()
-            cM_map = cM - cM_bar
+            #cM_map = cM - cM_bar
 
             def V(X):
-                Y = X @ (cM_map)
-                #Y = Mij * (X[:, self.nz_r] - X[:, self.nz_c])
+                #Y = X @ (cM)
+                Y = Mij * self.Bop._matmat(X)
                 #BadjY = self.Bop._adjoint(Y)
-                aux_X = X[:, hat_r] - X[:, hat_c]
-                aux_D = D[:, alpha_less_1]
-                products = np.sum(aux_X * aux_D, axis=0)
+                #aux_X = X[:, hat_r] - X[:, hat_c]
+                #aux_D = D[:, alpha_less_1]
+                #products = np.sum((X[:, hat_r] - X[:, hat_c]) * D[:, alpha_less_1], axis=0)
+                products = sum_with_numba(X, hat_r, hat_c, D, alpha_less_1_explicit)
                 rho = np.zeros(self.E)
                 rho[alpha_less_1] = hat_alpha / (norms_D[alpha_less_1]**2) * products
                 W = rho * D
