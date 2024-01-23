@@ -70,7 +70,7 @@ class SSNAL():
         return np.dot(self.weights, np.sqrt(np.sum(np.square(U), axis=0)))
     
     def prox_pU(self, U, tau = 1):
-        weights =  self.weights
+        weights = self.weights
         upper = tau * weights
         norms = np.sqrt(np.sum(np.square(U), axis=0))
         norms = np.maximum(norms, upper)
