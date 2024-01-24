@@ -307,7 +307,7 @@ def ssncg(
 
     for itersub in range(maxitersub):
         Ly = 0.5 * fnorm(xi - data) ** 2
-        Ly = Ly + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
+        Ly = Ly + np.dot(weight_vec, np.sqrt(np.einsum("ij,ij->j", y, y)))
         GradLxi = data - xi - sig * Ainput.ATmap(ytmp)
         normGradLxi = fnorm(GradLxi)
         priminf_sub = normGradLxi
@@ -357,7 +357,7 @@ def ssncg(
         _, idx, _ = find(rr > 0)
         nzidx = idx
         normytmp = norm_yinput[idx]
-        Dsub = yinput[:, idx] * 1 / normytmp
+        Dsub = yinput[:, idx] / normytmp
         alpha = weight_vec[idx] / (sigma * normytmp)
 
         dxi, resnrm, solve_ok = ssncg_direction(
