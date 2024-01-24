@@ -11,13 +11,13 @@ import time
 
 
 def compute_weights(
-    X: npt.ArrayLike, k: int, phi: float, gamma: float, verbose=1
+    X: npt.ArrayLike, k: int, phi: float, verbose=1
 ) -> (npt.ArrayLike, csr_array, csr_array):
     if verbose:
         print("Computing weights...")
     start_time = time.perf_counter()
     N = X.shape[1]
-    weight_matrix, _ = compute_weight_matrix(X, k, phi, gamma, N)
+    weight_matrix, _ = compute_weight_matrix(X, k, phi, N)
     idx_r, idx_c, val = find(triu(weight_matrix))
     num_weight = len(val)
     W = lil_array((N, num_weight))
