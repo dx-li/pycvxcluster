@@ -59,7 +59,7 @@ def admm_l2(
     dual_win = 0
 
     for iter in range(max_iter):
-        rhsxi = X - Atx + sigma * y @ A.T
+        rhsxi = X - Atx + sigma * (A @ y.T).T
         rhsxi = rhsxi.T
         xit = np.zeros_like(xi).T
         for i in range(xit.shape[1]):
