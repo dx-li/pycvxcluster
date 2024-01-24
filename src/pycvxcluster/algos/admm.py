@@ -36,11 +36,13 @@ def admm_l2(
         xi = X.copy()
     else:
         xi = xi0
-    if y0 is None or x0 is None:
+    if y0 is None:
         y = np.zeros((d, E))
-        x = y
     else:
         y = y0
+    if x0 is None:
+        x = np.zeros((d, E))
+    else:
         x = x0
     Axi = xi @ A
     AtAxi = Axi @ A.T

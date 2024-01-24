@@ -83,6 +83,9 @@ def ssnal(
             rho=1.618,
             stop_tol=stoptol,
             verbose=verbose,
+            xi0=xi,
+            x0=z,
+            y0=y,
         )
         if admm_eta < stoptol:
             print("ADMM converged in {} iterations.".format(admm_status))
