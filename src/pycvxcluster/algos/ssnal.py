@@ -1,11 +1,8 @@
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
-from scipy.sparse import csr_array
-from scipy.sparse import lil_array
+
 from scipy.sparse import find
 from pycvxcluster.algos.helpers import fnorm
 from pycvxcluster.algos.helpers import prox_l2
-from pycvxcluster.algos.helpers import proj_l2 as proj_l2
+from pycvxcluster.algos.helpers import proj_l2 
 from pycvxcluster.algos.admm import admm_l2
 import numpy as np
 import math

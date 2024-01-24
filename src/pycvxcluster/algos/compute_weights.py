@@ -35,15 +35,13 @@ def compute_weights(
     return weight_vec, node_arc_matrix, weight_matrix, end_time - start_time
 
 
-def compute_weight_matrix(X, k, phi, gamma, verbose=1):
+def compute_weight_matrix(X, k, phi, verbose=1):
     N = X.shape[1]
     if verbose:
         print("Computing weight matrix...")
     start_time = time.perf_counter()
     if phi <= 0:
         raise ValueError("phi must be positive")
-    if gamma <= 0:
-        raise ValueError("gamma must be positive")
     if k <= 0:
         raise ValueError("k must be positive")
     tree = KDTree(X.T)
@@ -57,7 +55,6 @@ def compute_weight_matrix(X, k, phi, gamma, verbose=1):
         weight_matrix[neighbors, i] = weight_values
     weight_matrix.setdiag(0)
     weight_matrix = weight_matrix.tocsr()
-    weight_matrix *= gamma
     end_time = time.perf_counter()
     if verbose:
         print("Weight matrix computed in {} seconds.".format(end_time - start_time))

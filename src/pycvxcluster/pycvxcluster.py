@@ -37,7 +37,7 @@ class SSNAL(CVXClusterAlg):
         admm_iter=100,
         stoptol=1e-6,
         ncgtolconst=0.5,
-        verbose=1,
+        verbose=0,
         **kwargs,
     ) -> None:
         """
@@ -108,11 +108,11 @@ class SSNAL(CVXClusterAlg):
                     self.weight_matrix_,
                     t1,
                 ) = compute_weight_matrix(
-                    X.T, self.k, self.phi, self.gamma, self.verbose
+                    X.T, self.k, self.phi, self.verbose
                 )
             else:
                 t1s = time.perf_counter()
-                self.weight_matrix_ = self.gamma * weight_matrix
+                self.weight_matrix_ = weight_matrix
                 t1 = time.perf_counter() - t1s
         else:
             t1 = 0
@@ -129,7 +129,7 @@ class SSNAL(CVXClusterAlg):
             t2,
         ) = ssnal_wrapper(
             X.T,
-            self.weight_vec_,
+            self.weight_vec_ * self.gamma,
             self.node_arc_matrix_,
             sigma=self.sigma,
             maxiter=self.maxiter,
@@ -143,10 +143,13 @@ class SSNAL(CVXClusterAlg):
             self.centers_ = xi
             self.y = y
             self.z = z
+        t3 = 0
         if save_labels:
+            t3s = time.perf_counter()
             self.labels_, self.n_clusters_ = find_clusters(xi, self.clustertol)
+            t3 = time.perf_counter() - t3s
         self.ssnal_runtime_ = t2
-        self.total_time_ = t1 + t2
+        self.total_time_ = t1 + t2 + t3
         if self.verbose > 0:
             print(f"Clustering completed in {self.total_time_} seconds.")
         return self
