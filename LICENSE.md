@@ -1,6 +1,7 @@
 Please consult original licenses
 
 For SSNAL:
+BSD 3-clause License
 %%%*************************************************************************
 %% SSNAL: A semismooth Newton-CG augmented Lagrangian method for convex clustering
 %%
