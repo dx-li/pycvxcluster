@@ -3,7 +3,7 @@ from pycvxcluster.algos.compute_weights import compute_weights
 from pycvxcluster.algos.compute_weights import compute_weight_matrix
 from pycvxcluster.algos.compute_weights import get_nam_wv_from_wm
 from pycvxcluster.algos.find_clusters import find_clusters
-from pycvxcluster.algos.ssnal_copy import ssnal_wrapper
+from pycvxcluster.algos.ssnal import ssnal_wrapper
 from pycvxcluster.algos.admm import admm_l2
 import time
 
@@ -179,7 +179,7 @@ class ADMM(CVXClusterAlg):
         maxiter=20000,
         stop_tol=1e-6,
         verbose=1,
-        **kwargs
+        **kwargs,
     ):
         """
         Parameters
@@ -268,7 +268,7 @@ class ADMM(CVXClusterAlg):
             sigma=self.sigma,
             stop_tol=self.stop_tol,
             verbose=self.verbose,
-            **self.kwargs
+            **self.kwargs,
         )
         self.labels_, self.n_clusters_ = find_clusters(U, self.clustertol)
         self.total_time_ = t1 + t2

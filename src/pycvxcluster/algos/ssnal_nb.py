@@ -10,24 +10,62 @@ from pycvxcluster.algos.admm import admm_l2
 import numpy as np
 import math
 import time
+import numba as nb
 
 EPS = np.finfo(np.float64).eps
+
+
+# Assuming that the sparse matrix is in CSC format
+@nb.njit(parallel=True, fastmath=True)
+def dense_times_sparse(
+    dense_matrix, sparse_data, sparse_indices, sparse_indptr, sparse_shape
+):
+    num_rows, num_cols = dense_matrix.shape[0], sparse_shape[1]
+    result = np.zeros((num_rows, num_cols), dtype=dense_matrix.dtype)
+
+    for j in nb.prange(num_cols):  # Loop over columns of the result
+        for i in range(num_rows):  # Loop over rows of the result
+            col_start = sparse_indptr[j]
+            col_end = sparse_indptr[j + 1]
+            result[i, j] = np.sum(
+                dense_matrix[i, sparse_indices[col_start:col_end]]
+                * sparse_data[col_start:col_end]
+            )
+
+    return result
 
 
 class AInput:
     def __init__(self, node_arc_matrix):
         self.A0 = node_arc_matrix
         self.A = node_arc_matrix
+        self.AT = self.A.T
         self.ATAmat = self.A.T @ self.A
 
+        # make csc
+        self.A0 = self.A0.tocsc()
+        self.A = self.A.tocsc()
+        self.AT = self.AT.tocsc()
+        self.ATAmat = self.ATAmat.tocsc()
+
     def Amap(self, x):
-        return x @ self.A0
+        return dense_times_sparse(
+            x, self.A.data, self.A.indices, self.A.indptr, self.A.shape
+        )
 
     def ATmap(self, x):
-        return x @ self.A0.T
+        return dense_times_sparse(
+            x, self.AT.data, self.AT.indices, self.AT.indptr, self.AT.shape
+        )
 
     def ATAmap(self, x):
-        return x @ self.ATAmat
+        return dense_times_sparse(
+            x,
+            self.ATAmat.data,
+            self.ATAmat.indices,
+            self.ATAmat.indptr,
+            self.ATAmat.shape,
+        )
 
 
 class Dim:
@@ -239,15 +277,12 @@ def ssnal(
 
 
 def sigma_update(iter):
-    if iter < 10:
-        sigma_update_iter = 2
-    elif iter < 20:
+    sigma_update_iter = 2
+    if iter < 20:
         sigma_update_iter = 3
     elif iter < 200:
         sigma_update_iter = 3
     elif iter < 500:
-        sigma_update_iter = 10
-    else:
         sigma_update_iter = 10
     return sigma_update_iter
 
@@ -518,10 +553,7 @@ def findstep(
         y, rr, norm_yinput = prox_l2(yinput, (1 / sig) * weight_vec)
         par_rr = rr
         ytmp = yinput - y
-        # galp = np.sum(dxi * (data - xi)) - sig * np.sum(Adxi * ytmp)
-        galp = np.einsum("ij,ij->", dxi, data - xi) - sig * np.einsum(
-            "ij,ij->", Adxi, ytmp
-        )
+        galp = np.sum(dxi * (data - xi)) - sig * np.sum(Adxi * ytmp)
 
         if iter == 0:
             gLB = g0
@@ -533,8 +565,7 @@ def findstep(
             Ly = 0.5 * fnorm(xi - data) ** 2
             Ly = (
                 Ly
-                # + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
-                + np.dot(weight_vec, np.sqrt(np.einsum("ij,ij->j", y, y)))
+                + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
                 + 0.5 * sig * fnorm(ytmp) ** 2
             )
 
@@ -554,8 +585,8 @@ def findstep(
 
 def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
     d, n = rhs.shape
-    x = np.zeros((d, n))
-    r = rhs
+    x = csr_array((d, n))
+    r = rhs.copy()
     res_temp = fnorm(r)
     resnrm = np.zeros(maxit + 1)
     resnrm[0] = res_temp
@@ -565,9 +596,6 @@ def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
 
     y = -r
     z = Matvec(y, nzidx, alpha, Dsub, sigma, Ainput)
-    # make y, z float64
-    # y = y.astype(np.float64)
-    # z = z.astype(np.float64)
     s = np.sum(y * z)
     t = np.sum(r * y) / s
     x = x + t * y
@@ -580,14 +608,11 @@ def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
         if res_temp < tol:
             break
 
-        # B = np.sum(r * z) / s
-        B = 1 / s * np.einsum("ij,ij->", r, z)
+        B = np.sum(r * z) / s
         y = -r + B * y
         z = Matvec(y, nzidx, alpha, Dsub, sigma, Ainput)
-        # s = np.sum(y * z)
-        s = np.einsum("ij,ij->", y, z)
-        # t = np.sum(r * y) / s
-        t = 1 / s * np.einsum("ij,ij->", r, y)
+        s = np.sum(y * z)
+        t = np.sum(r * y) / s
         x = x + t * y
 
     if k < maxit:
@@ -603,7 +628,7 @@ def Matvec(y, nzidx, alpha, Dsub, sigma, Ainput):
     Ay = Ainput.Amap(y)
     if lenn > 0:
         Aytmp = Ay[:, idx]
-        rho = np.einsum("j, ij,ij->j", alpha, Aytmp, Dsub)
+        rho = alpha * np.sum(Aytmp * Dsub, axis=0)
         Ay[:, idx] = Aytmp * alpha - Dsub * rho
     My = y + sigma * Ainput.ATmap(Ay)
     return My
