@@ -14,17 +14,20 @@ EPS = np.finfo(np.float64).eps
 class AInput:
     def __init__(self, node_arc_matrix):
         self.A0 = node_arc_matrix
-        self.A = node_arc_matrix
-        self.ATAmat = self.A.T @ self.A
+        self.AT = node_arc_matrix.T
+        self.ATAmatT = (self.A0.T @ self.A0).T
 
     def Amap(self, x):
-        return x @ self.A0
+        #return x @ self.A0
+        return (self.AT @ x.T).T
 
     def ATmap(self, x):
-        return x @ self.A0.T
+        #return x @ self.A0.T
+        return (self.A0 @ x.T).T
 
     def ATAmap(self, x):
-        return x @ self.ATAmat
+        #return x @ self.ATAmat
+        return (self.ATAmatT @ x.T).T
 
 
 class Dim:
@@ -636,10 +639,10 @@ def get_relgap(primobj, dualobj):
 
 
 def get_dualobj(data, Atz):
-    return -0.5 * fnorm(Atz) ** 2 + np.sum(data * Atz)
+    return -0.5 * fnorm(Atz) ** 2 + np.einsum("ij,ij->", data, Atz)
 
 
 def get_primobj(data, weight_vec, xi, Axi):
-    return 0.5 * fnorm(xi - data) ** 2 + np.sum(
-        weight_vec * np.sqrt(np.sum(Axi * Axi, axis=0))
-    )
+    return 0.5 * fnorm(xi - data) ** 2 + np.dot(
+                weight_vec , np.sqrt(np.einsum("ij,ij->j", Axi, Axi))
+            )
