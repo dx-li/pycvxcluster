@@ -1,8 +1,7 @@
-
 from scipy.sparse import find
 from pycvxcluster.algos.helpers import fnorm
 from pycvxcluster.algos.helpers import prox_l2
-from pycvxcluster.algos.helpers import proj_l2 
+from pycvxcluster.algos.helpers import proj_l2
 from pycvxcluster.algos.admm import admm_l2
 import numpy as np
 import math
@@ -18,15 +17,15 @@ class AInput:
         self.ATAmatT = (self.A0.T @ self.A0).T
 
     def Amap(self, x):
-        #return x @ self.A0
+        # return x @ self.A0
         return (self.AT @ x.T).T
 
     def ATmap(self, x):
-        #return x @ self.A0.T
+        # return x @ self.A0.T
         return (self.A0 @ x.T).T
 
     def ATAmap(self, x):
-        #return x @ self.ATAmat
+        # return x @ self.ATAmat
         return (self.ATAmatT @ x.T).T
 
 
@@ -644,5 +643,5 @@ def get_dualobj(data, Atz):
 
 def get_primobj(data, weight_vec, xi, Axi):
     return 0.5 * fnorm(xi - data) ** 2 + np.dot(
-                weight_vec , np.sqrt(np.einsum("ij,ij->j", Axi, Axi))
-            )
+        weight_vec, np.sqrt(np.einsum("ij,ij->j", Axi, Axi))
+    )

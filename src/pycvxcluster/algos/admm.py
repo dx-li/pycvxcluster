@@ -45,7 +45,7 @@ def admm_l2(
     else:
         x = x0
     Axi = (A.T @ xi.T).T
-    #AtAxi = Axi @ A.T
+    # AtAxi = Axi @ A.T
     Atx = (A @ x.T).T
     Rp = Axi - y
     proj_x = proj_l2(x, weight_vec)
@@ -80,9 +80,9 @@ def admm_l2(
         maxfeas = max(primfeas, dualfeas)
         if maxfeas < stop_tol:
             primobj = 0.5 * fnorm(xi - X) ** 2 + np.dot(
-                weight_vec , np.sqrt(np.einsum("ij,ij->j",Axi, Axi))
+                weight_vec, np.sqrt(np.einsum("ij,ij->j", Axi, Axi))
             )
-            dualobj = -0.5 * fnorm(Atx) ** 2 + np.einsum("ij,ij->", X ,Atx)
+            dualobj = -0.5 * fnorm(Atx) ** 2 + np.einsum("ij,ij->", X, Atx)
             relgap = np.abs(primobj - dualobj) / (1 + np.abs(primobj) + np.abs(dualobj))
             eta = relgap
 
@@ -93,9 +93,9 @@ def admm_l2(
     if breakyes == 0:
         msg = "Maximum number of iterations reached"
     primobj = 0.5 * fnorm(xi - X) ** 2 + np.sum(
-        weight_vec * np.sqrt(np.einsum("ij,ij->j",Axi , Axi))
+        weight_vec * np.sqrt(np.einsum("ij,ij->j", Axi, Axi))
     )
-    dualobj = -0.5 * fnorm(Atx) ** 2 + np.einsum("ij,ij->", X ,Atx)
+    dualobj = -0.5 * fnorm(Atx) ** 2 + np.einsum("ij,ij->", X, Atx)
     relgap = np.abs(primobj - dualobj) / (1 + np.abs(primobj) + np.abs(dualobj))
     eta = relgap
     end_time = time.perf_counter()

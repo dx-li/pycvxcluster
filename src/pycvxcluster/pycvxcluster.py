@@ -107,9 +107,7 @@ class SSNAL(CVXClusterAlg):
                 (
                     self.weight_matrix_,
                     t1,
-                ) = compute_weight_matrix(
-                    X.T, self.k, self.phi, self.verbose
-                )
+                ) = compute_weight_matrix(X.T, self.k, self.phi, self.verbose)
             else:
                 t1s = time.perf_counter()
                 self.weight_matrix_ = weight_matrix
@@ -169,4 +167,3 @@ class SSNAL(CVXClusterAlg):
         """
         self.fit(X, y, **kwargs)
         return self.labels_
-
