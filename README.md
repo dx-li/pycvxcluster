@@ -7,6 +7,7 @@ IN DEVELOPMENT, future changes may cause backwards-compatability issues
 
 To do:
 * Make package installable
+* Documentation
 * Logging
 * Typing
 * Testing
