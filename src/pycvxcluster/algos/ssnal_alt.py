@@ -11,8 +11,6 @@ import scipy.sparse.linalg as sla
 
 import math
 
-# from numba import jit, njit, prange
-
 # Preliminaries
 
 class B(pylops.LinearOperator):
@@ -190,7 +188,8 @@ class SSNAL:
         termination = 1
         prim_win = 0
         dual_win = 0
-        ncg_iter = 50
+        # REMOVE ONCE DONE TESTING
+        ncg_iter = 60
         ncg_tol = 1e-6
 
         for itera in range(max_iter):
@@ -250,9 +249,9 @@ class SSNAL:
         Z,
         sigma,
         mu=1e-4,
-        tau=1,
+        tau=.5,
         eta=1e-2,
-        delta=0.95,
+        delta=0.5,
         max_iter=20,
         tolerance=1e-6,
         cg_max_iter=300,
@@ -267,14 +266,16 @@ class SSNAL:
         normU = fnorm(U)
         Rp = self.kkt_3(X0, U)
         normRp = fnorm(Rp)
+        #tolerance = fnorm(self.grad_phi(Xj, Z, sigma)) * .1
+        score = 0
+        norm_prev_best = np.inf
 
-        #max_iter = 100
+        #max_iter = 200
         for itera in range(max_iter):
             #print('ssncg iter: ', iter)
 
             grad_phi_Xj = self.grad_phi(Xj, Z, sigma)
             norm_grad_phi_Xj = fnorm(grad_phi_Xj)
-
 
             priminf_sub = norm_grad_phi_Xj
             dualinf_sub = normRd / (1 + normborg)
@@ -283,8 +284,19 @@ class SSNAL:
             else:
                 tolsubconst = 0.5
             tolsub = np.maximum(np.minimum(1, 0.5 * normRp / (1 + normU)), tolsubconst * tolerance)
-            #print(np.nanmax(norm_grad_phi_Xj), np.nanmax(tolsub))
-            if norm_grad_phi_Xj < tolsub and itera > 0:
+            #print(np.nanmax(norm_grad_phi_Xj), np.nanmax(tolsub), tolerance)
+            #print(tolerance)
+            if itera > 0:
+                if norm_grad_phi_Xj > norm_prev_best:
+                    score += 1
+                    if score > 5:
+                        print('here')
+                        #Xj = Xj_best
+                        break
+                else:
+                    norm_prev_best = norm_grad_phi_Xj
+                    Xj_best = Xj
+            if (norm_grad_phi_Xj < tolsub) and itera > 0:
                 print('subproblem converged')
                 break
             elif max(priminf_sub, dualinf_sub) < 0.5 * tolerance:
@@ -336,8 +348,12 @@ class SSNAL:
             # print('step 2')
 
             alpj = self.line_search(Xj, dj, Z, sigma, mu)
+            # alpj = 10
+            # phiXj = self.phi(Xj, Z, sigma)
+            # innergpXjdj = matinner(grad_phi_Xj, dj)
             # while self.phi(Xj + alpj * dj, Z, sigma) > phiXj + mu * alpj * innergpXjdj:
             #     alpj *= delta
+            print('alpj: ', alpj)
 
             # Step 3
             Xj = Xj + alpj * dj
@@ -346,30 +362,34 @@ class SSNAL:
                 break
 
 
-        #print(itera, Xj)
+
+        print('subiter', itera)
         return Xj
 
-    def line_search(self, Xj, dj, Z, sigma, mu=1e-4, c2 = 0.9, alp_max = 20):
+    def line_search(self, Xj, dj, Z, sigma, mu=1e-4, c2 = 0.9, alp_max = 1e3):
         alp_prev = 0
-        alpi = 0.5
+        alpi = 1
         f = lambda alp: self.phi(Xj + alp * dj, Z, sigma)
         f0 = f(0)
         f_1 = lambda alp: matinner(self.grad_phi(Xj + alp * dj, Z, sigma), dj)
         f_1_0 = f_1(0)
         max_iter = 10
+        fprev = f0
         for i in range(max_iter):
             curr = f(alpi)
-            if curr > f0 + mu * alpi * f_1_0:
+            if curr > f0 + mu * alpi * f_1_0 or (curr > fprev and i > 0):
                 alpi = self.zoom(alp_prev, alpi, mu, c2, f, f_1, f0, f_1_0)
                 return alpi
             grad = f_1(alpi)
-            if abs(grad) <= -c2 * f_1_0:
+            if abs(grad) <= c2 * abs(f_1_0):
                 return alpi
             if grad >= 0:
                 alpi = self.zoom(alpi, alp_prev, mu, c2, f, f_1, f0, f_1_0)
                 return alpi
             alp_prev = alpi
+            fprev = curr
             alpi = min(2 * alpi, alp_max)
+        print('line search did not converge')
         return alpi
 
     def zoom(self, alp_low, alp_high, mu, c2, f, f_1, f0, f_1_0):
@@ -379,7 +399,7 @@ class SSNAL:
                 alp_high = alp_j
             else:
                 grad = f_1(alp_j)
-                if abs(grad) <= -c2 * f_1_0:
+                if abs(grad) <= c2 * abs(f_1_0):
                     return alp_j
                 if grad * (alp_high - alp_low) >= 0:
                     alp_high = alp_low
