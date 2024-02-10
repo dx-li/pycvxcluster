@@ -50,7 +50,6 @@ def fnormsq(X):
 def matinner(X, Y):
     return np.trace(np.inner(X, Y))
 
-
 def column_norms(X):
     return np.sqrt(np.einsum("ij,ij->j", X, X))
 
@@ -96,7 +95,7 @@ class SSNAL:
 
     def primal(self, X, U):
         return 0.5 * fnormsq(X - self.A) + self.pU(U)
-
+    
     def dual(self, X, U, Z):
         adZ = self.Bop._adjoint(Z)
         return -0.5 * fnormsq(adZ) + matinner(self.A, adZ)
@@ -118,9 +117,7 @@ class SSNAL:
 
         etd = fnorm(Z - self.proxdual_pU(Z)) / (1 + fnorm(Z))
 
-        et = fnorm(self.kkt_4(Z, -X + self.A)) / (1 + fnorm(X)) + fnorm(
-            self.kkt_2(U, Z)
-        ) / (1 + fnorm(U))
+        et = fnorm(self.kkt_4(Z, -X + self.A)) / (1 + fnorm(X)) + fnorm(self.kkt_2(U, Z)) / (1 + fnorm(U))
 
         return etp, etd, et
 
@@ -188,7 +185,7 @@ class SSNAL:
             print("kkt_residual: ", kkt_residual)
             prim = self.primal(Xi, Ui)
             dual = self.dual(Xi, Ui, Zi)
-            prim_dual_gap = np.abs(prim - dual) / (1 + np.abs(prim) + np.abs(dual))
+            prim_dual_gap = np.abs(prim-dual) / (1 + np.abs(prim) + np.abs(dual))
             print("prim_dual_gap: ", prim_dual_gap)
             if np.max(kkt_residual) < eps:
                 termination = 0
@@ -225,9 +222,9 @@ class SSNAL:
             D = self.Bop._matmat(Xj) + Z / sigma
             upper = self.weights
             norms_D = column_norms(D)
-            zet = upper / norms_D
+            zet = upper/norms_D
             zet_less_one = zet < 1
-            # zet_less_one_explicit = np.arange(self.E)[zet_less_one]
+            #zet_less_one_explicit = np.arange(self.E)[zet_less_one]
             norms_D_hat = norms_D[zet_less_one]
             D_sel = D[:, zet_less_one] / norms_D_hat
 
@@ -298,13 +295,13 @@ class SSNAL:
                 residual = residual - ssres / sdVsd * Vsd
 
                 stopping = fnorm(grad_phi_Xj + V(dj))
-                # print('stopping: ', stopping)
+                #print('stopping: ', stopping)
                 if stopping <= min(eta, cg_tolerance):
                     break
             # Step 2
             # print('step 2')
             alpj = 1
-
+            
             phiXj = self.phi(Xj, Z, sigma)
             innergpXjdj = matinner(grad_phi_Xj, dj)
             # mj = 0
@@ -315,7 +312,10 @@ class SSNAL:
             #     mj += 1
             mj = 0
             alpj = 1
-            while self.phi(Xj + alpj * dj, Z, sigma) > phiXj + mu * alpj * innergpXjdj:
+            while (
+                    self.phi(Xj + alpj * dj, Z, sigma)
+                    > phiXj + mu * alpj * innergpXjdj
+                ):
                 alpj *= delta
             # if (self.phi(Xj + delta**mj * dj, Z, sigma)
             #     > phiXj + mu * delta**mj * innergpXjdj):
@@ -333,17 +333,17 @@ class SSNAL:
             #         if mj == -1:
             #             break
             #     mj += 1
-            # print('mj: ', mj)
-            # mjs[iter] = mj
-            # print(score)
-            # if iter > 0:
+            #print('mj: ', mj)
+            #mjs[iter] = mj
+            #print(score)
+            # if iter > 0: 
             #     if mjs[iter] == mjs[iter - 1]:
             #         score += 1
             #         if score > 9:
             #             break
             #     else:
             #         score = 0
-            # alpj = delta**mj
+            #alpj = delta**mj
 
             # Step 3
             Xj_prev = Xj
