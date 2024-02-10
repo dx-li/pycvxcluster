@@ -94,6 +94,8 @@ class SSNAL(CVXClusterAlg):
             Training instances to cluster.
         y : Ignored
             Not used, present here for API consistency by convention.
+        save_labels : bool, optional
+            Whether to save the cluster labels. The default is True.
         save_centers : bool, optional
             Whether to save the cluster centers. The default is False.
         weight_matrix : array-like of shape (n_samples, n_samples), optional
