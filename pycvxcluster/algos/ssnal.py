@@ -1,71 +1,32 @@
-import scipy.linalg as la
-import scipy.sparse.linalg as sla
-from scipy.sparse import csr_array
-from scipy.sparse import lil_array
 from scipy.sparse import find
 from pycvxcluster.algos.helpers import fnorm
 from pycvxcluster.algos.helpers import prox_l2
-from pycvxcluster.algos.helpers import proj_l2 as proj_l2
+from pycvxcluster.algos.helpers import proj_l2
 from pycvxcluster.algos.admm import admm_l2
 import numpy as np
 import math
 import time
-import numba as nb
 
 EPS = np.finfo(np.float64).eps
-
-
-# Assuming that the sparse matrix is in CSC format
-@nb.njit(parallel=True, fastmath=True)
-def dense_times_sparse(
-    dense_matrix, sparse_data, sparse_indices, sparse_indptr, sparse_shape
-):
-    num_rows, num_cols = dense_matrix.shape[0], sparse_shape[1]
-    result = np.zeros((num_rows, num_cols), dtype=dense_matrix.dtype)
-
-    for j in nb.prange(num_cols):  # Loop over columns of the result
-        for i in range(num_rows):  # Loop over rows of the result
-            col_start = sparse_indptr[j]
-            col_end = sparse_indptr[j + 1]
-            result[i, j] = np.sum(
-                dense_matrix[i, sparse_indices[col_start:col_end]]
-                * sparse_data[col_start:col_end]
-            )
-
-    return result
 
 
 class AInput:
     def __init__(self, node_arc_matrix):
         self.A0 = node_arc_matrix
-        self.A = node_arc_matrix
-        self.AT = self.A.T
-        self.ATAmat = self.A.T @ self.A
-
-        # make csc
-        self.A0 = self.A0.tocsc()
-        self.A = self.A.tocsc()
-        self.AT = self.AT.tocsc()
-        self.ATAmat = self.ATAmat.tocsc()
+        self.AT = node_arc_matrix.T
+        self.ATAmatT = (self.A0.T @ self.A0).T
 
     def Amap(self, x):
-        return dense_times_sparse(
-            x, self.A.data, self.A.indices, self.A.indptr, self.A.shape
-        )
+        # return x @ self.A0
+        return (self.AT @ x.T).T
 
     def ATmap(self, x):
-        return dense_times_sparse(
-            x, self.AT.data, self.AT.indices, self.AT.indptr, self.AT.shape
-        )
+        # return x @ self.A0.T
+        return (self.A0 @ x.T).T
 
     def ATAmap(self, x):
-        return dense_times_sparse(
-            x,
-            self.ATAmat.data,
-            self.ATAmat.indices,
-            self.ATAmat.indptr,
-            self.ATAmat.shape,
-        )
+        # return x @ self.ATAmat
+        return (self.ATAmatT @ x.T).T
 
 
 class Dim:
@@ -124,6 +85,9 @@ def ssnal(
             rho=1.618,
             stop_tol=stoptol,
             verbose=verbose,
+            xi0=xi,
+            x0=z,
+            y0=y,
         )
         if admm_eta < stoptol:
             print("ADMM converged in {} iterations.".format(admm_status))
@@ -246,6 +210,7 @@ def ssnal(
             elif dual_win > max(1, 1.2 * prim_win):
                 dual_win = 0
                 sigma = min(sigmamax, sigma * sigmascale)
+        #print(sigma)
 
     if iter == maxiter - 1:
         msg = "max iterations reached"
@@ -277,12 +242,15 @@ def ssnal(
 
 
 def sigma_update(iter):
-    sigma_update_iter = 2
-    if iter < 20:
+    if iter < 10:
+        sigma_update_iter = 2
+    elif iter < 20:
         sigma_update_iter = 3
     elif iter < 200:
         sigma_update_iter = 3
     elif iter < 500:
+        sigma_update_iter = 10
+    else:
         sigma_update_iter = 10
     return sigma_update_iter
 
@@ -328,6 +296,7 @@ def ssncg(
 
     Rd = np.maximum(np.sqrt(np.sum(z0 * z0, axis=0)) - weight_vec, 0)
     normRd = np.sum(Rd)
+    #print(Rd)
 
     priminf_hist = np.zeros(maxitersub)
     dualinf_hist = np.zeros(maxitersub)
@@ -340,7 +309,7 @@ def ssncg(
 
     for itersub in range(maxitersub):
         Ly = 0.5 * fnorm(xi - data) ** 2
-        Ly = Ly + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
+        Ly = Ly + np.dot(weight_vec, np.sqrt(np.einsum("ij,ij->j", y, y)))
         GradLxi = data - xi - sig * Ainput.ATmap(ytmp)
         normGradLxi = fnorm(GradLxi)
         priminf_sub = normGradLxi
@@ -355,12 +324,14 @@ def ssncg(
         priminf_hist[itersub] = priminf_sub
         dualinf_hist[itersub] = dualinf_sub
         Ly_hist[itersub] = Ly
-
+        #print(np.nanmax(normGradLxi), np.nanmax(tolsub))
         if np.nanmax(normGradLxi) < np.nanmax(tolsub) and itersub > 1:
+            #print('here')
             breakyes = -1
             break
         elif max(priminf_sub, dualinf_sub) < 0.5 * tol:
             msg = f"max(priminf_sub, dualinf_sub) < {0.5 * tol:.3f}"
+            #print(msg)
             breakyes = -1
             break
 
@@ -390,13 +361,13 @@ def ssncg(
         _, idx, _ = find(rr > 0)
         nzidx = idx
         normytmp = norm_yinput[idx]
-        Dsub = yinput[:, idx] * 1 / normytmp
+        Dsub = yinput[:, idx] / normytmp
         alpha = weight_vec[idx] / (sigma * normytmp)
 
         dxi, resnrm, solve_ok = ssncg_direction(
             Ainput, rhs, dirtol, maxit, nzidx, alpha, Dsub, sigma
         )
-
+        
         Adxi = Ainput.Amap(dxi)
         iterpsqmr = len(resnrm) - 1
 
@@ -411,6 +382,7 @@ def ssncg(
         xi, Axi, y, ytmp, alp, iterstep, yinput, norm_yinput, rr, par_rr = findstep(
             data, weight_vec, xi, Axi, y, ytmp, dxi, Adxi, steptol, stepopt, Ly, sigma
         )
+        #print(alp)
         solve_ok_hist[itersub] = solve_ok
         psqmr_hist[itersub] = iterpsqmr
 
@@ -438,7 +410,7 @@ def ssncg(
                 break
     if par_rr is None:
         par_rr = 0
-
+    #print(itersub, xi)
     return y, Axi, xi, par_rr, breakyes
 
 
@@ -553,19 +525,25 @@ def findstep(
         y, rr, norm_yinput = prox_l2(yinput, (1 / sig) * weight_vec)
         par_rr = rr
         ytmp = yinput - y
-        galp = np.sum(dxi * (data - xi)) - sig * np.sum(Adxi * ytmp)
+        # galp = np.sum(dxi * (data - xi)) - sig * np.sum(Adxi * ytmp)
+        galp = np.einsum("ij,ij->", dxi, data - xi) - sig * np.einsum(
+            "ij,ij->", Adxi, ytmp
+        )
 
         if iter == 0:
             gLB = g0
             gUB = galp
             if np.sign(gLB) * np.sign(gUB) > 0:
+                #print('here in find')
                 return xi, Axi, y, ytmp, alp, iter, yinput, norm_yinput, rr, par_rr
 
         if abs(galp) < c2 * abs(g0):
+            #print('in this now')
             Ly = 0.5 * fnorm(xi - data) ** 2
             Ly = (
                 Ly
-                + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
+                # + np.sum(weight_vec * np.sqrt(np.sum(y * y, axis=0)))
+                + np.dot(weight_vec, np.sqrt(np.einsum("ij,ij->j", y, y)))
                 + 0.5 * sig * fnorm(ytmp) ** 2
             )
 
@@ -585,8 +563,8 @@ def findstep(
 
 def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
     d, n = rhs.shape
-    x = csr_array((d, n))
-    r = rhs.copy()
+    x = np.zeros((d, n))
+    r = rhs
     res_temp = fnorm(r)
     resnrm = np.zeros(maxit + 1)
     resnrm[0] = res_temp
@@ -596,6 +574,9 @@ def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
 
     y = -r
     z = Matvec(y, nzidx, alpha, Dsub, sigma, Ainput)
+    # make y, z float64
+    # y = y.astype(np.float64)
+    # z = z.astype(np.float64)
     s = np.sum(y * z)
     t = np.sum(r * y) / s
     x = x + t * y
@@ -608,17 +589,21 @@ def ssncg_direction(Ainput, rhs, tol, maxit, nzidx, alpha, Dsub, sigma):
         if res_temp < tol:
             break
 
-        B = np.sum(r * z) / s
+        # B = np.sum(r * z) / s
+        B = 1 / s * np.einsum("ij,ij->", r, z)
         y = -r + B * y
         z = Matvec(y, nzidx, alpha, Dsub, sigma, Ainput)
-        s = np.sum(y * z)
-        t = np.sum(r * y) / s
+        # s = np.sum(y * z)
+        s = np.einsum("ij,ij->", y, z)
+        # t = np.sum(r * y) / s
+        t = 1 / s * np.einsum("ij,ij->", r, y)
         x = x + t * y
 
     if k < maxit:
         solve_ok = 1
     else:
         solve_ok = -1
+    #print(x)
     return x, resnrm, solve_ok
 
 
@@ -628,7 +613,7 @@ def Matvec(y, nzidx, alpha, Dsub, sigma, Ainput):
     Ay = Ainput.Amap(y)
     if lenn > 0:
         Aytmp = Ay[:, idx]
-        rho = alpha * np.sum(Aytmp * Dsub, axis=0)
+        rho = np.einsum("j, ij,ij->j", alpha, Aytmp, Dsub)
         Ay[:, idx] = Aytmp * alpha - Dsub * rho
     My = y + sigma * Ainput.ATmap(Ay)
     return My
@@ -661,10 +646,10 @@ def get_relgap(primobj, dualobj):
 
 
 def get_dualobj(data, Atz):
-    return -0.5 * fnorm(Atz) ** 2 + np.sum(data * Atz)
+    return -0.5 * fnorm(Atz) ** 2 + np.einsum("ij,ij->", data, Atz)
 
 
 def get_primobj(data, weight_vec, xi, Axi):
-    return 0.5 * fnorm(xi - data) ** 2 + np.sum(
-        weight_vec * np.sqrt(np.sum(Axi * Axi, axis=0))
+    return 0.5 * fnorm(xi - data) ** 2 + np.dot(
+        weight_vec, np.sqrt(np.einsum("ij,ij->j", Axi, Axi))
     )
