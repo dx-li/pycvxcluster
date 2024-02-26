@@ -2,7 +2,7 @@
 
 Ports implementations of convex clustering algorithms to Python and gives sklearn-like interface. Planned to include ADMM (Chi, Lange 2015), SSNAL (Sun, Toh, Yuan 2021).
 
-Installation: For now, download the folder, cd to the folder, run "pip install . -e"
+Installation: For now, download the folder, cd to the folder, run "pip install -e ."
 
 Dependencies: Numpy, Scipy, scikit-learn, sckikit-sparse
 
